@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<h2>User Info</h2>
+<br>
+<br>
+<form th:action="@{/admin/saveUser}" th:object="${user}" method="post">
+  <input type ="hidden" th:field="*{id}"/>
+  <label>Username</label>
+  <input type ="text" th:field="*{username}"/>
+  <br><br>
+  <label>First_Name:</label>
+  <input type="text" th:field="*{firstName}" id="FirstName" />
+  <br><br>
+  <label>Last_Name:</label>
+  <input type="text" th:field="*{lastName}" id="LastName" />
+  <br><br>
+  <label>Salary:</label>
+  <input type="number" th:field="*{salary}" id="salary" />
+  <br><br>
+  <label>Department:</label>
+  <input type="text" th:field="*{department}" id="department" />
+  <br><br>
+  <label>User Role:</label>
+  <input type="text" th:field="*{roles}" id="user role" />
+  <br><br>
+  <br><br>
+  <label>Password:</label>
+  <input type="text" th:field="*{password}" id="user password" />
+  <br><br>
+  <input type="submit" value="OK" />
+</form>
+</body>
+</html>

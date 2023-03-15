@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<header><form th:action="@{/logout}" th:method="POST">
+    <button type="submit" class="btn btn-dark text-right">Logout</button>
+</form>
+</header>
+<table>
+    <thead>
+    <tr>
+        <th>Username</th>
+        <th>First_Name</th>
+        <th>Last_Name</th>
+        <th>Occupation</th>
+        <th>Income</th>
+        <th colspan="2">Operations</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="user : ${allUsers}">
+        <hidden th:field="*{user.id}"/>
+        <td th:text="${user.username}"></td>
+        <td th:text="${user.firstName}"></td>
+        <td th:text="${user.lastName}"></td>
+        <td th:text="${user.salary}"></td>
+        <td th:text="${user.department}"></td>
+        <td>
+            <form th:action="@{/admin/updateUser={id}(id=${user.getId()})}" th:object="${user}" method="get">
+                <input type="submit" value="Update"/></form>
+            </td>
+           <td> <form th:action="@{/admin/deleteUser={id}(id=${user.getId()})}" th:object="${user}" method="get">
+                <input type="submit" value="Delete"/></form>
+        </td>
+</table>
+<br>
+<input type="button" value="Add"
+       onclick="window.location.href = 'admin/addNewUser'"/>
+</body>
+</html>
