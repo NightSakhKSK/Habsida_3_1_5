@@ -583,7 +583,9 @@
     });
 
     function showAdminPanel(event) {
-        event.preventDefault();
+        if (event) {
+            event.preventDefault();
+        }
         document.getElementById("adminPanel").style.display = "block";
         document.getElementById("userView").style.display = "none";
     }

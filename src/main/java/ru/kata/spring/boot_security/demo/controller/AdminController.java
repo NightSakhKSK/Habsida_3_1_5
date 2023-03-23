@@ -1,11 +1,10 @@
 package ru.kata.spring.boot_security.demo.controller;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -15,10 +14,7 @@ import ru.kata.spring.boot_security.demo.entity.Role;
 import ru.kata.spring.boot_security.demo.entity.User;
 import ru.kata.spring.boot_security.demo.service.UserService;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 @Controller
 @RequestMapping("/admin")
@@ -27,6 +23,8 @@ public class AdminController {
     private UserRepository userRepository;
     private UserService userService;
     private RoleRepository roleRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     public AdminController(UserRepository userRepository, UserService userService, RoleRepository roleRepository) {
@@ -86,19 +84,24 @@ public class AdminController {
         return "redirect:/admin";
     }
 
-    @GetMapping("/editUser")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, Model model) {
-        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + id));
-        user.setPassword(new BCryptPasswordEncoder().encode(user.getPassword()));
-        model.addAttribute("user", user);
-        return ResponseEntity.ok().build();
-    }
+//    @GetMapping("/editUser")
+//    public ResponseEntity<?> updateUser(@PathVariable Long id, Model model) {
+//        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + id));
+////        user.setPassword(passwordEncoder.encode(user.getPassword()));
+//        model.addAttribute("user", user);
+//        return ResponseEntity.ok().build();
+//    }
 
     @PostMapping("/editUser")
     public ResponseEntity<?> saveUpdatedUser(@RequestBody User user) {
         User existingUser = userRepository.findByUsername(user.getUsername());
         if (existingUser != null && !existingUser.getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
+        }
+
+        // Обновление пароля только в том случае, если он предоставлен
+        if (user.getNewPassword() != null && !user.getNewPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(user.getNewPassword()));
         }
 
         userService.update(user);
@@ -112,7 +115,7 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
-//-- удалить
+
     @GetMapping("/getUserById/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + id));
@@ -136,11 +139,4 @@ public class AdminController {
         return "allRoles";
     }
 
-    @GetMapping("/showAddUserForm")
-    public String showAddUserForm(Model model) {
-        User newUser = new User();
-        model.addAttribute("user", newUser);
-        model.addAttribute("allRoles", roleRepository.findAll());
-        return "addNewUser"; // Замените на имя вашего Thymeleaf-шаблона для формы добавления пользователя
-    }
 }

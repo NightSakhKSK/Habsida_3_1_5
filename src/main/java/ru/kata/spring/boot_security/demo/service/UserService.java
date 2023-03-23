@@ -1,14 +1,17 @@
 package ru.kata.spring.boot_security.demo.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import ru.kata.spring.boot_security.demo.Repository.RoleRepository;
 import ru.kata.spring.boot_security.demo.Repository.UserRepository;
+import ru.kata.spring.boot_security.demo.configs.WebSecurityConfig;
 import ru.kata.spring.boot_security.demo.entity.Role;
 import ru.kata.spring.boot_security.demo.entity.User;
 
@@ -16,14 +19,14 @@ import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Service
 public class UserService implements UserDetailsService {
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
-
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     public UserService(RoleRepository roleRepository,
                        UserRepository userRepository) {
         this.roleRepository = roleRepository;
@@ -51,7 +54,7 @@ public class UserService implements UserDetailsService {
         adminUser.setSalary(-555);
         adminUser.setDepartment("SECURITY");
         adminUser.setUsername("admin");
-        adminUser.setPassword("admin");
+        adminUser.setPassword(passwordEncoder.encode("admin"));
         adminUser.setRoles(Collections.singleton(adminRole));
 
         User baka = new User();
@@ -61,7 +64,7 @@ public class UserService implements UserDetailsService {
         baka.setSalary(0);
         baka.setDepartment("TEST_DEPARTMENT");
         baka.setUsername("baka");
-        baka.setPassword("user");
+        baka.setPassword(passwordEncoder.encode("user"));
         baka.setRoles(Collections.singleton(userRole));
 
         userRepository.save(adminUser);
@@ -115,7 +118,7 @@ public class UserService implements UserDetailsService {
         existingUser.setLastName(user.getLastName());
         existingUser.setSalary(user.getSalary());
         existingUser.setDepartment(user.getDepartment());
-        existingUser.setPassword(user.getPassword());
+        existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
 
         // Находим и устанавливаем соответствующие роли из базы данных
         Set<Role> updatedRoles = new HashSet<>();
