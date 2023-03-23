@@ -13,6 +13,7 @@ import ru.kata.spring.boot_security.demo.entity.Role;
 import ru.kata.spring.boot_security.demo.entity.User;
 
 import javax.annotation.PostConstruct;
+import javax.transaction.Transactional;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +30,7 @@ public class UserService implements UserDetailsService {
         this.userRepository = userRepository;
     }
 
+    //Эта часть кода не нужна будет в будущем, так как пользователи тестовые созданы, остальное можно делать через приложение
     @PostConstruct
     public void init() {
         Role adminRole = new Role();
@@ -59,40 +61,37 @@ public class UserService implements UserDetailsService {
         baka.setSalary(0);
         baka.setDepartment("TEST_DEPARTMENT");
         baka.setUsername("baka");
-        baka.setPassword(new BCryptPasswordEncoder().encode("user"));
+        baka.setPassword("user");
         baka.setRoles(Collections.singleton(userRole));
 
-        setRolesForUsers();
-        saveAllUserNames();
         userRepository.save(adminUser);
         userRepository.save(baka);
 
     }
 
-    public void setRolesForUsers() {
-        Role userRole = roleRepository.findByName("USER");
+    //рудимент, оставлю на память, устанавливал роли для юзеров, которые были в БД, но до добавления ролей пользователям, сейчас таких пользователей нет
+//    public void setRolesForUsers() {
+//        Role userRole = roleRepository.findByName("USER");
+//        List<User> users = userRepository.findAll();
+//        for (User user : users) {
+//            Set<Role> roles = user.getRoles();
+//            if (roles == null) {
+//                roles = new HashSet<>();
+//            }
+//            if (!roles.contains(userRole) && roles.size() == 0) {
+//                roles.add(userRole);
+//                user.setRoles(roles);
+//                userRepository.save(user);
+//            }
+//        }
+//    }
 
-        List<User> users = userRepository.findAll();
-
-        for (User user : users) {
-            Set<Role> roles = user.getRoles();
-            if (roles == null) {
-                roles = new HashSet<>();
-            }
-            if (!roles.contains(userRole) && roles.size() == 0) {
-                roles.add(userRole);
-                user.setRoles(roles);
-                userRepository.save(user);
-            }
-        }
-    }
-
-    public void saveAllUserNames() {
-        List<User> users = userRepository.findAll();
-        for (User user : users) {
-            user.setUsername(user.generateUsername());
-            userRepository.save(user);
-        }
+    @Transactional
+    public void deleteUserById(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + userId));
+        user.getRoles().clear();
+        userRepository.save(user);
+        userRepository.delete(user);
     }
 
     @Override
@@ -107,5 +106,25 @@ public class UserService implements UserDetailsService {
         }
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(), user.getPassword(), authorities);
+    }
+
+    public void update(User user) {
+        User existingUser = userRepository.findById(user.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+        existingUser.setUsername(user.getUsername());
+        existingUser.setFirstName(user.getFirstName());
+        existingUser.setLastName(user.getLastName());
+        existingUser.setSalary(user.getSalary());
+        existingUser.setDepartment(user.getDepartment());
+        existingUser.setPassword(user.getPassword());
+
+        // Находим и устанавливаем соответствующие роли из базы данных
+        Set<Role> updatedRoles = new HashSet<>();
+        for (Role role : user.getRoles()) {
+            Role existingRole = roleRepository.findById(role.getId()).orElseThrow(() -> new RuntimeException("Role not found"));
+            updatedRoles.add(existingRole);
+        }
+        existingUser.setRoles(updatedRoles);
+
+        userRepository.save(existingUser);
     }
 }
