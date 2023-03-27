@@ -16,34 +16,118 @@ async function fetchRoles() {
     }
 }
 
-async function submitNewUser() {
-    // Получение данных из полей формы
-    const username = document.getElementById("username").value;
-    const firstName = document.getElementById("firstName").value;
-    const lastName = document.getElementById("lastName").value;
-    const salary = document.getElementById("salary").value;
-    const department = document.getElementById("department").value;
-    const password = document.getElementById("password").value;
+async function fetchUsers() {
+    fetch('/api/admin/users')
+        .then(response => response.json())
+        .then(users => {
+            const tableBody = document.getElementById('tableBody');
 
-    // Здесь нужно получить выбранные роли из формы, например, используя селектор
-    const rolesSelect = document.getElementById("rolesSelect");
-    const selectedRoles = Array.from(rolesSelect.selectedOptions).map(option => {
-        return {
-            id: parseInt(option.value),
-            name: option.text
-        };
+            users.forEach(user => {
+                const row = document.createElement('tr');
+
+                // Добавляем ячейки с данными пользователя
+                row.innerHTML = `
+          <td>${user.id}</td>
+          <td>${user.username}</td>
+          <td>${user.firstName}</td>
+          <td>${user.lastName}</td>
+          <td>${user.salary}</td>
+          <td>${user.department}</td>
+          <td>${user.roles.map(role => role.name).join(', ')}</td>
+          <td>
+            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editModal" onclick="openEditModal(${user.id})">
+              Edit
+            </button>
+          </td>
+          <td>
+             <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" onclick="showDeleteModal(${user.id})">
+             Delete
+             </button>
+          </td>
+        `;
+
+                tableBody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching users:', error);
+        });
+}
+
+window.showDeleteModal = function(userId) {
+    fetch(`/api/admin/getUserById/${userId}`)
+        .then(response => response.json())
+        .then(user => {
+            console.log("User fetched:", user);
+            document.getElementById('DUserId').value = user.id;
+            document.getElementById('DUsername').value = user.username;
+            document.getElementById('DFirstName').value = user.firstName;
+            document.getElementById('DLastName').value = user.lastName;
+            document.getElementById('Dsalary').value = user.salary;
+            document.getElementById('Ddepartment').value = user.department;
+            document.getElementById('DUserRole').value = user.roles.map(role => role.name).join(', ');
+            document.getElementById('DuserPassword').value = user.password;
+            $('#deleteModal').modal('show');
+        })
+        .catch(error => {
+            console.error('Error fetching user:', error);
+        });
+}
+async function submitNewUser() {
+    const inputIds = [
+        "username1",
+        "firstName",
+        "lastName",
+        "salary",
+        "department",
+        "userPassword",
+        "rolesSelect",
+    ];
+
+    // Check if all elements exist before accessing their values
+    const inputValues = inputIds.map((id) => {
+        const input = document.getElementById(id);
+        if (!input) {
+            console.error(`Element with id "${id}" not found`);
+            return null;
+        }
+        return input.value;
     });
 
-    // Формирование JSON-объекта с данными пользователя
-    const userData = {
+    // Return early if any element is not found
+    if (inputValues.includes(null)) {
+        return;
+    }
+
+    const [
         username,
         firstName,
         lastName,
         salary,
         department,
         password,
-        roles: selectedRoles,
-    };
+        rolesSelect,
+    ] = inputValues;
+
+    // Handle the 'rolesSelect' value separately, as it is not a string value
+    const selectedRoles = Array.from(
+        document.getElementById("rolesSelect").selectedOptions
+    ).map((option) => {
+        return {
+            id: parseInt(option.value),
+            name: option.text,
+        };
+    });
+
+    const userData = {
+        username,
+        firstName,
+        lastName,
+        salary: parseInt(salary),
+        department,
+        password,
+        roles: selectedRoles
+        };
 
     try {
         const response = await fetch("/api/admin/addNewUser", {
@@ -56,17 +140,18 @@ async function submitNewUser() {
 
         if (response.ok) {
             alert("User created successfully!");
+            location.reload(); // Add this line to refresh the page after the user is created
         } else {
             const errorText = await response.text();
             console.error("Error creating user:", errorText);
+            alert("Error creating user: " + errorText);
         }
     } catch (error) {
-        console.error("Error creating user:", error);
     }
 }
 
-// Добавьте обработчик событий для кнопки "Add New User"
-document.getElementById("addNewUserBtn").addEventListener("click", submitNewUser);
+// Обработчик событий для кнопки "Add New User"
+document.getElementById("addNewUserBtn2").addEventListener("click", submitNewUser);
 
 
 function addNewUser() {
@@ -99,35 +184,17 @@ function toggleAddUserForm() {
     document.getElementById('addUserForm').style.display = formDisplay === 'none' ? 'block' : 'none';
 }
 
-function showDeleteModal(userId) {
-    fetch(`/admin/getUserById/${userId}`)
-        .then(response => response.json())
-        .then(user => {
-            document.getElementById('DUserId').value = user.id;
-            document.getElementById('DUsername').value = user.username;
-            document.getElementById('DFirstName').value = user.firstName;
-            document.getElementById('DLastName').value = user.lastName;
-            document.getElementById('Dsalary').value = user.salary;
-            document.getElementById('Ddepartment').value = user.department;
-            document.getElementById('DUserRole').value = user.roles.map(role => role.name).join(', ');
-            document.getElementById('DuserPassword').value = user.password;
-
-            $('#deleteModal').modal('show');
-        });
-}
-
-async function submitDeleteForm() {
-    const userId = document.getElementById('DUserId').value;
+window.submitDeleteForm = async function(userId, roleName) {
+    const deleteUserId = document.getElementById('DUserId').value;
 
     try {
-        const response = await fetch(`/admin/deleteUser=${userId}`, {
-            method: 'POST',
+        const response = await fetch(`/api/admin/deleteUser/${userId}?${roleName}`, {
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             }
         });
-
         if (response.status === 200) {
             window.location.reload();
         } else {
@@ -139,8 +206,11 @@ async function submitDeleteForm() {
     }
 }
 
-function openEditModal(userId) {
-    fetch(`/admin/getUserById/${userId}`)
+document.getElementById("deleteButton").addEventListener("click", submitDeleteForm);
+
+window.openEditModal = function(userId) {
+
+    fetch(`/api/admin/getUserById/${userId}`)
         .then(response => response.json())
         .then(user => {
             document.getElementById('EUserId').value = user.id;
@@ -149,10 +219,17 @@ function openEditModal(userId) {
             document.getElementById('ELastName').value = user.lastName;
             document.getElementById('Esalary').value = user.salary;
             document.getElementById('Edepartment').value = user.department;
-            document.getElementById('EUserRole').value = user.roles.map(role => role.name).join(', ');
+            const userRoleSelect = document.getElementById('rolesSelect2');
+            const userRoles = user.roles.map(role => role.name);
+            Array.from(userRoleSelect.options).forEach((option) => {
+                if (userRoles.includes(option.text)) {
+                    option.selected = true;
+                }
+            });
             document.getElementById('EuserPassword').value = user.password;
-
-            $('#editModal').modal('show');
+        })
+        .catch(error => {
+            console.error('Error fetching user:', error);
         });
 }
 
@@ -241,44 +318,7 @@ function showUserView(event) {
 
 showAdminPanel();
 
-async function fetchUsers() {
-    fetch('/api/admin/users')
-        .then(response => response.json())
-        .then(users => {
-            const tableBody = document.getElementById('tableBody');
-
-            users.forEach(user => {
-                const row = document.createElement('tr');
-
-                // Добавляем ячейки с данными пользователя
-                row.innerHTML = `
-          <td>${user.id}</td>
-          <td>${user.username}</td>
-          <td>${user.firstName}</td>
-          <td>${user.lastName}</td>
-          <td>${user.salary}</td>
-          <td>${user.department}</td>
-          <td>${user.roles.map(role => role.name).join(', ')}</td>
-          <td>
-            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#editModal" onclick="openEditModal(${user.id})">
-              Edit
-            </button>
-          </td>
-          <td>
-             <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" onclick="showDeleteModal(${user.id})">
-              Delete
-            </button>
-          </td>
-        `;
-
-                tableBody.appendChild(row);
-            });
-        })
-        .catch(error => {
-            console.error('Error fetching users:', error);
-        });
-}
-
+//Отображает пользователей в таблице
 function fetchUserData(userData) {
     try {
         document.getElementById('username').textContent = userData.username;
@@ -310,5 +350,6 @@ async function displayUserData() {
 document.addEventListener('DOMContentLoaded', async () => {
     await fetchUsers();
     await fetchRoles();
+    fetchUserData();
     displayUserData();
 });

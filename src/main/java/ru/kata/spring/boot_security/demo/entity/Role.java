@@ -1,6 +1,7 @@
 package ru.kata.spring.boot_security.demo.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
@@ -20,6 +21,7 @@ public class Role {
     @Column(name = "name")
     private String name;
 
+    @JsonBackReference
     @ManyToMany(mappedBy = "roles")
     private Set<User> users = new HashSet<>();
 

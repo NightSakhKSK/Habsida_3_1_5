@@ -1,7 +1,6 @@
 package ru.kata.spring.boot_security.demo.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,7 +10,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import ru.kata.spring.boot_security.demo.Repository.RoleRepository;
 import ru.kata.spring.boot_security.demo.Repository.UserRepository;
-import ru.kata.spring.boot_security.demo.configs.WebSecurityConfig;
 import ru.kata.spring.boot_security.demo.entity.Role;
 import ru.kata.spring.boot_security.demo.entity.User;
 
@@ -27,6 +25,7 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+
     public UserService(RoleRepository roleRepository,
                        UserRepository userRepository) {
         this.roleRepository = roleRepository;
@@ -89,10 +88,12 @@ public class UserService implements UserDetailsService {
 //        }
 //    }
 
+
     @Transactional
-    public void deleteUserById(Long userId) {
+    public void deleteUserById(Long userId, String roleName) {
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + userId));
-        user.getRoles().clear();
+        Role role = roleRepository.findByName(roleName);
+        user.getRoles().remove(role);
         userRepository.save(user);
         userRepository.delete(user);
     }

@@ -12,6 +12,7 @@ import ru.kata.spring.boot_security.demo.Repository.RoleRepository;
 import ru.kata.spring.boot_security.demo.Repository.UserRepository;
 import ru.kata.spring.boot_security.demo.entity.Role;
 import ru.kata.spring.boot_security.demo.entity.User;
+import ru.kata.spring.boot_security.demo.entity.UserResponse;
 import ru.kata.spring.boot_security.demo.service.UserService;
 
 import java.util.HashSet;
@@ -38,9 +39,12 @@ public class RestController {
     }
 
     @GetMapping("/users")
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> allUsers = userRepository.findAll();
-        return ResponseEntity.ok(allUsers);
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        List<UserResponse> userResponses = users.stream()
+                .map(UserResponse::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(userResponses);
     }
 
     @PostMapping("/addNewUser")
@@ -55,19 +59,19 @@ public class RestController {
         user.setUsername(username);
         user.setFirstName((String) userData.get("firstName"));
         user.setLastName((String) userData.get("lastName"));
-        user.setSalary(Integer.valueOf((String) userData.get("salary")));
+        user.setSalary((Integer) userData.get("salary"));
         user.setDepartment((String) userData.get("department"));
         user.setPassword(passwordEncoder.encode((String) userData.get("password")));
 
-        List<Map<String, Object>> roleObjects = (List<Map<String, Object>>) userData.get("roles");
-        if (roleObjects == null) {
+        List<Map<String, Object>> roleDataList = (List<Map<String, Object>>) userData.get("roles");
+        if (roleDataList == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Roles are required");
         }
 
         Set<Role> roles = new HashSet<>();
-        for (Map<String, Object> roleObject : roleObjects) {
-            Long roleId = Long.valueOf((Integer) roleObject.get("id"));
-            Role role = roleRepository.findById(roleId).orElse(null);
+        for (Map<String, Object> roleData : roleDataList) {
+            Integer roleId = (Integer) roleData.get("id");
+            Role role = roleRepository.findById((long) roleId).orElse(null);
             if (role != null) {
                 roles.add(role);
             }
@@ -105,15 +109,17 @@ public class RestController {
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @DeleteMapping("/deleteUser/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        userService.deleteUserById(id);
+    public ResponseEntity<?> deleteUser(@PathVariable Long id, String roleName) {
+        userService.deleteUserById(id, roleName);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/getUserById/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + id));
-        return ResponseEntity.ok(user);
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + id));
+        UserResponse userResponse = new UserResponse(user);
+        return ResponseEntity.ok(userResponse);
     }
 
     @GetMapping("/getRoleByName/{name}")

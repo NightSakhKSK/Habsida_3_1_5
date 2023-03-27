@@ -123,7 +123,6 @@
                                     <tbody id="tableBody">
                                     </tbody>
                                 </table>
-                                <script src="script.js"></script>
 
                                 <!--                        Форма по созданию нового пользователя-->
 
@@ -171,8 +170,8 @@
                                                     <div style="width: 14%; border-radius: 5px;"
                                                          class="d-flex justify-content-center mx-auto">
                                                         <select id="rolesSelect" multiple>
-                                                            <option value="1">ROLE_USER</option>
-                                                            <option value="2">ROLE_ADMIN</option>
+                                                            <option value="2">USER</option>
+                                                            <option value="1">ADMIN</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -183,7 +182,7 @@
                                                     <input type="password" id="userPassword"/>
                                                 </div>
                                                 <br>
-                                                <input type="submit" value="Add New User" class="btn btn-success"/>
+                                                <input id="addNewUserBtn2" type="submit" value="Add New User" class="btn btn-success"/>
                                             </form>
                                         </div>
                                     </div>
@@ -287,13 +286,12 @@
                     <div>
                         <label><strong>User Role:</strong></label>
                         <br>
-                        <div style="width: 47%; border-radius: 5px;"
+                        <div style="width: 100%; border-radius: 5px;"
                              class="d-flex justify-content-center mx-auto">
-                            <!--                            <select multiple class="form-control w-100" th:field="*{allRoles}"-->
-                            <!--                                    id="EUserRole">-->
-                            <!--                                <option th:each="role: ${allRoles}" th:value="${role.id}"-->
-                            <!--                                        th:text="${role.name}"></option>-->
-                            <!--                            </select>-->
+                            <select id="rolesSelect2" multiple>
+                                <option value="2">USER</option>
+                                <option value="1">ADMIN</option>
+                            </select>
                         </div>
                     </div>
                     <div>
@@ -373,8 +371,8 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="submit" class="btn btn-danger" id="deleteButton" data-user-id=""
-                        onclick="submitDeleteForm()">Delete
+                <button type="button" id="deleteButton" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" onclick="submitDeleteForm('${user.id}', '${user.roles[0].name}')">
+                    Delete
                 </button>
             </div>
         </div>
