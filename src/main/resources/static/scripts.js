@@ -41,7 +41,7 @@ async function fetchUsers() {
           </td>
           <td>
              <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" onclick="showDeleteModal(${user.id})">
-             Delete
+              Delete
              </button>
           </td>
         `;
@@ -54,11 +54,18 @@ async function fetchUsers() {
         });
 }
 
-window.showDeleteModal = function(userId) {
-    fetch(`/api/admin/getUserById/${userId}`)
+function updateUserTable() {
+    const tableBody = document.getElementById('tableBody');
+    tableBody.innerHTML = '';
+    fetchUsers();
+}
+
+window.showDeleteModal = function(id) {
+    let deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    fetch(`/api/admin/getUserById/${id}`)
         .then(response => response.json())
         .then(user => {
-            console.log("User fetched:", user);
             document.getElementById('DUserId').value = user.id;
             document.getElementById('DUsername').value = user.username;
             document.getElementById('DFirstName').value = user.firstName;
@@ -67,11 +74,32 @@ window.showDeleteModal = function(userId) {
             document.getElementById('Ddepartment').value = user.department;
             document.getElementById('DUserRole').value = user.roles.map(role => role.name).join(', ');
             document.getElementById('DuserPassword').value = user.password;
-            $('#deleteModal').modal('show');
+            deleteModal.show();
         })
         .catch(error => {
             console.error('Error fetching user:', error);
         });
+
+    var isDelete = false;
+    document.getElementById('deleteUser').addEventListener('submit', event => {
+        event.preventDefault();
+        if (!isDelete) {
+            isDelete = true;
+            fetch(`/api/admin/deleteUser/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }).then(() => {
+                console.log('User deleted successfully');
+                deleteModal.hide();
+                document.querySelector('.modal-backdrop').remove();
+                updateUserTable(); // обновление таблицы
+            }).catch(error => {
+                console.error('Error deleting user:', error);
+            });
+        }
+    });
 }
 async function submitNewUser() {
     const inputIds = [
@@ -184,33 +212,13 @@ function toggleAddUserForm() {
     document.getElementById('addUserForm').style.display = formDisplay === 'none' ? 'block' : 'none';
 }
 
-window.submitDeleteForm = async function(userId, roleName) {
-    const deleteUserId = document.getElementById('DUserId').value;
 
-    try {
-        const response = await fetch(`/api/admin/deleteUser/${userId}?${roleName}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
-        });
-        if (response.status === 200) {
-            window.location.reload();
-        } else {
-            alert('Failed to delete user');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to delete user');
-    }
-}
+window.openEditModal = function(id) {
+    let editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    const selectedRoles = document.querySelectorAll('#rolesSelect2 option');
+    let oldPassword = null; // Добавляем переменную для хранения старого пароля
 
-document.getElementById("deleteButton").addEventListener("click", submitDeleteForm);
-
-window.openEditModal = function(userId) {
-
-    fetch(`/api/admin/getUserById/${userId}`)
+    fetch(`/api/admin/getUserById/${id}`)
         .then(response => response.json())
         .then(user => {
             document.getElementById('EUserId').value = user.id;
@@ -219,68 +227,72 @@ window.openEditModal = function(userId) {
             document.getElementById('ELastName').value = user.lastName;
             document.getElementById('Esalary').value = user.salary;
             document.getElementById('Edepartment').value = user.department;
-            const userRoleSelect = document.getElementById('rolesSelect2');
-            const userRoles = user.roles.map(role => role.name);
-            Array.from(userRoleSelect.options).forEach((option) => {
-                if (userRoles.includes(option.text)) {
-                    option.selected = true;
-                }
-            });
             document.getElementById('EuserPassword').value = user.password;
+            oldPassword = user.password; // Сохраняем старый пароль
+
+            // Показываем модальное окно
+            editModal.show();
         })
         .catch(error => {
             console.error('Error fetching user:', error);
         });
-}
 
-function submitEditForm() {
-    // Получаем данные формы
-    const userId = $('#EUserId').val();
-    const username = $('#EUsername').val();
-    const firstName = $('#EFirstName').val();
-    const lastName = $('#ELastName').val();
-    const salary = $('#Esalary').val();
-    const department = $('#Edepartment').val();
-    const password = $('#EuserPassword').val();
-    const selectedRoles = $('#EUserRole option:selected');
-    if (selectedRoles.length === 0) {
-        alert('Пожалуйста, выберите хотя бы одну роль');
-        return;
-    }
-    const roles = Array.from(selectedRoles).map(option => ({
-        id: parseInt(option.value)
-    }));
+    // Обрабатываем отправку формы
+    var isEdit = false;
+    document.getElementById('editUser').addEventListener('submit', event => {
+        event.preventDefault();
 
-    // Создаем объект пользователя
-    const user = {
-        id: parseInt(userId),
-        username: username,
-        firstName: firstName,
-        lastName: lastName,
-        salary: parseInt(salary),
-        department: department,
-        password: password,
-        roles: roles
-    };
+        if (!isEdit) {
+            isEdit = true;
+            const userId = document.getElementById('EUserId').value;
+            const username = document.getElementById('EUsername').value;
+            const firstName = document.getElementById('EFirstName').value;
+            const lastName = document.getElementById('ELastName').value;
+            const salary = document.getElementById('Esalary').value;
+            const department = document.getElementById('Edepartment').value;
+            const password = document.getElementById('EuserPassword').value;
+            const roleIds = Array.from(selectedRoles)
+                .filter(option => option.selected)
+                .map(option => parseInt(option.value));
 
-    // Отправляем данные на сервер
-    fetch('/admin/editUser', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(user)
-    })
-        .then(response => {
-            if (response.ok) {
-                // Закрываем модальное окно и обновляем страницу после успешного сохранения
-                $('#editModal').modal('hide');
-                location.reload();
-            } else {
-                // Обрабатываем ошибку
-                console.log('Error: ' + response.status + ' ' + response.statusText);
-            }
-        });
+            const user = {
+                id: parseInt(userId),
+                username: username,
+                firstName: firstName,
+                lastName: lastName,
+                salary: parseInt(salary),
+                department: department,
+                password: password
+            };
+            const userUpdateDTO = {
+                user: user,
+                oldPassword: oldPassword, // Добавляем старый пароль в userUpdateDTO
+                roleIds: roleIds,
+            };
+
+            fetch(`/api/admin/editUser/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userUpdateDTO)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        // Закрываем модальное окно и обновляем таблицу после успешного сохранения
+                        editModal.hide();
+                        document.querySelector('.modal-backdrop').remove();
+                        updateUserTable(); // обновление таблицы
+                    } else {
+                        // Обрабатываем ошибку
+                        console.log('Error: ' + response.status + ' ' + response.statusText);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating user:', error);
+                });
+        }
+    });
 }
 
 function setActiveButton(button) {
@@ -319,16 +331,6 @@ function showUserView(event) {
 showAdminPanel();
 
 //Отображает пользователей в таблице
-function fetchUserData(userData) {
-    try {
-        document.getElementById('username').textContent = userData.username;
-
-        let roles = userData.roles.map(role => role.name).join(', ');
-        document.getElementById('userRoles').textContent = roles;
-    } catch (error) {
-        console.error('Error displaying user data:', error);
-    }
-}
 
 async function fetchCurrentUser() {
     try {
@@ -340,16 +342,7 @@ async function fetchCurrentUser() {
     }
 }
 
-async function displayUserData() {
-    const user = await fetchCurrentUser();
-    if (user) {
-        fetchUserData(user);
-    }
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     await fetchUsers();
     await fetchRoles();
-    fetchUserData();
-    displayUserData();
 });

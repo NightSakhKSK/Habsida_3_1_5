@@ -31,7 +31,7 @@ public class User {
     @Column(name = "Department")
     private String Department;
     @JsonBackReference
-    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
@@ -60,9 +60,6 @@ public class User {
         Salary = salary;
         Department = department;
         this.roles = roles;
-    }
-    public String generateUsername() {
-        return this.getFirstName() + "_" + this.getLastName() + "_" + this.getId();
     }
     public Long getId() {
         return id;

@@ -7,7 +7,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import ru.kata.spring.boot_security.demo.DTO.UserUpdateDTO;
 import ru.kata.spring.boot_security.demo.Repository.RoleRepository;
 import ru.kata.spring.boot_security.demo.Repository.UserRepository;
 import ru.kata.spring.boot_security.demo.entity.Role;
@@ -15,10 +17,7 @@ import ru.kata.spring.boot_security.demo.entity.User;
 import ru.kata.spring.boot_security.demo.entity.UserResponse;
 import ru.kata.spring.boot_security.demo.service.UserService;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @org.springframework.web.bind.annotation.RestController
@@ -92,26 +91,48 @@ public class RestController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/editUser")
-    public ResponseEntity<?> saveUpdatedUser(@RequestBody User user) {
-        User existingUser = userRepository.findByUsername(user.getUsername());
-        if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+    @PutMapping("/editUser/{id}")
+    public ResponseEntity<?> saveUpdatedUser(@PathVariable Long id, @RequestBody UserUpdateDTO userUpdateDTO) {
+        Optional<User> optionalUser = userRepository.findById(id);
+        if (!optionalUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+        User existingUser = userRepository.findByUsername(userUpdateDTO.getUser().getUsername());
+        if (existingUser != null && !existingUser.getId().equals(id)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
         }
 
-        if (user.getNewPassword() != null && !user.getNewPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(user.getNewPassword()));
+        User updatedUser = optionalUser.get();
+        updatedUser.setUsername(userUpdateDTO.getUser().getUsername());
+        updatedUser.setFirstName(userUpdateDTO.getUser().getFirstName());
+        updatedUser.setLastName(userUpdateDTO.getUser().getLastName());
+        updatedUser.setSalary(userUpdateDTO.getUser().getSalary());
+        updatedUser.setDepartment(userUpdateDTO.getUser().getDepartment());
+        //Проверка, был ли изменён пароль пользователя или нет
+        String oldPassword = userUpdateDTO.getOldPassword();
+        String newPassword = userUpdateDTO.getUser().getPassword();
+        if (oldPassword == null || !oldPassword.matches(newPassword)) {
+            updatedUser.setPassword(newPassword);
         }
 
-        userService.update(user);
+        // Загрузка ролей из репозитория и установка их для обновленного пользователя
+        Set<Role> roles = new HashSet<>(roleRepository.findAllById(userUpdateDTO.getRoleIds()));
+        updatedUser.setRoles(roles);
+
+        userService.update(updatedUser, oldPassword);
         return ResponseEntity.ok().build();
     }
 
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+
     @DeleteMapping("/deleteUser/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id, String roleName) {
-        userService.deleteUserById(id, roleName);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        try {
+            userService.deleteUserById(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/getUserById/{id}")

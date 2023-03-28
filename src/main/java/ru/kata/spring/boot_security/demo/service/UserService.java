@@ -32,6 +32,7 @@ public class UserService implements UserDetailsService {
         this.userRepository = userRepository;
     }
 
+
     //Эта часть кода не нужна будет в будущем, так как пользователи тестовые созданы, остальное можно делать через приложение
     @PostConstruct
     public void init() {
@@ -71,36 +72,26 @@ public class UserService implements UserDetailsService {
 
     }
 
-    //рудимент, оставлю на память, устанавливал роли для юзеров, которые были в БД, но до добавления ролей пользователям, сейчас таких пользователей нет
-//    public void setRolesForUsers() {
-//        Role userRole = roleRepository.findByName("USER");
-//        List<User> users = userRepository.findAll();
-//        for (User user : users) {
-//            Set<Role> roles = user.getRoles();
-//            if (roles == null) {
-//                roles = new HashSet<>();
-//            }
-//            if (!roles.contains(userRole) && roles.size() == 0) {
-//                roles.add(userRole);
-//                user.setRoles(roles);
-//                userRepository.save(user);
-//            }
-//        }
-//    }
-
-
     @Transactional
-    public void deleteUserById(Long userId, String roleName) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + userId));
-        Role role = roleRepository.findByName(roleName);
-        user.getRoles().remove(role);
-        userRepository.save(user);
+    public void deleteUserById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid user id: " + userId));
+        Set<Role> roles = user.getRoles();
+        for (Role role : roles) {
+            role.getUsers().remove(user);
+            if (role.getUsers().isEmpty()) {
+                role.setUsers(null);
+                roleRepository.save(role);
+            }
+        }
+        user.setRoles(null);
         userRepository.delete(user);
     }
 
     @Override
+    @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username);
+        User user = userRepository.findByUsernameWithRoles(username);
         if (user == null) {
             throw new UsernameNotFoundException("User not found");
         }
@@ -112,19 +103,23 @@ public class UserService implements UserDetailsService {
                 user.getUsername(), user.getPassword(), authorities);
     }
 
-    public void update(User user) {
-        User existingUser = userRepository.findById(user.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+    @Transactional
+    public void update(User user, String oldPassword) {
+        User existingUser = userRepository.findByIdWithRoles(user.getId());
         existingUser.setUsername(user.getUsername());
         existingUser.setFirstName(user.getFirstName());
         existingUser.setLastName(user.getLastName());
         existingUser.setSalary(user.getSalary());
         existingUser.setDepartment(user.getDepartment());
-        existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
-
+        // Энкодировать пароль только если он был изменен
+        if (existingUser.getPassword().matches(oldPassword)) {
+            existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         // Находим и устанавливаем соответствующие роли из базы данных
         Set<Role> updatedRoles = new HashSet<>();
         for (Role role : user.getRoles()) {
-            Role existingRole = roleRepository.findById(role.getId()).orElseThrow(() -> new RuntimeException("Role not found"));
+            Role existingRole = roleRepository.findById(role.getId())
+                    .orElseThrow(() -> new RuntimeException("Role not found"));
             updatedRoles.add(existingRole);
         }
         existingUser.setRoles(updatedRoles);
