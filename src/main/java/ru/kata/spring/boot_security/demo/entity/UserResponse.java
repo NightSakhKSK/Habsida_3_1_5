@@ -119,5 +119,4 @@ public class UserResponse {
         this.authorities = authorities;
     }
 
-    // ... геттеры, сеттеры и другие методы ...
 }

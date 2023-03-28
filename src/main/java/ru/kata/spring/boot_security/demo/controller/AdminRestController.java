@@ -7,7 +7,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import ru.kata.spring.boot_security.demo.DTO.UserUpdateDTO;
 import ru.kata.spring.boot_security.demo.Repository.RoleRepository;
@@ -22,7 +21,7 @@ import java.util.stream.Collectors;
 
 @org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/admin/")
-public class RestController {
+public class AdminRestController {
 
     private UserRepository userRepository;
     private UserService userService;
@@ -31,7 +30,7 @@ public class RestController {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    public RestController(UserRepository userRepository, UserService userService, RoleRepository roleRepository) {
+    public AdminRestController(UserRepository userRepository, UserService userService, RoleRepository roleRepository) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.roleRepository = roleRepository;
@@ -192,9 +191,21 @@ public class RestController {
     }
 
     @GetMapping("/currentUser")
-    public ResponseEntity<User> getCurrentUser() {
+    public ResponseEntity<UserUpdateDTO> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = userRepository.findByUsername(auth.getName());
-        return ResponseEntity.ok(currentUser);
+        User currentUser = userRepository.findByUsernameWithRoles(auth.getName());
+
+        // Создайте объект UserDto из текущего пользователя
+        List<String> roleNames = currentUser.getRoles().stream().map(Role::getName).collect(Collectors.toList());
+        UserUpdateDTO userDto = new UserUpdateDTO(
+                currentUser.getId()
+                ,currentUser.getUsername()
+                ,currentUser.getFirstName()
+                ,currentUser.getLastName()
+                ,currentUser.getDepartment()
+                ,currentUser.getSalary()
+                ,roleNames);
+
+        return ResponseEntity.ok(userDto);
     }
 }

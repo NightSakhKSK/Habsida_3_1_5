@@ -54,8 +54,8 @@
 <header class="navbar bg-dark">
 <span class="navbar-brand text-white">
     <strong id="username"></strong>
-    <span id="userRolePrefix"> with role: </span>
-    <span id="userRoles"></span>
+    <span> with role: </span>
+    <strong id="userRoles"></strong>
 </span>
     <form th:action="@{/logout}" th:method="POST">
         <button type="submit" class="btn btn-light"
@@ -70,14 +70,12 @@
         <div class="col-md-2 bg-white full-height">
             <ul class="nav flex-column text-left">
                 <li class="nav nav-pills nav-fill justify-content-between my-2">
-                    <a class="nav-link active w-100 transparent-btn" href="#" onclick="showAdminPanel(event);">Admin
-                        Panel</a>
-
+                    <a class="nav-link w-100 transparent-btn" id="adminPanelBtn" href="#" onclick="showAdminPanel(event);">Admin Panel</a>
                 </li>
             </ul>
             <ul class="nav flex-column text-left">
                 <li class="nav nav-pills nav-fill justify-content-between">
-                    <a class="nav-link active w-100 transparent-btn" href="" onclick="showUserView(event);">User</a>
+                    <a class="nav-link w-100 transparent-btn" id="userViewBtn" href="" onclick="showUserView(event);">User</a>
                 </li>
             </ul>
         </div>
@@ -171,7 +169,7 @@
                                                     <label><strong>User Role:</strong></label>
                                                     <div style="width: 14%; border-radius: 5px;"
                                                          class="d-flex justify-content-center mx-auto">
-                                                        <select id="rolesSelect" multiple>
+                                                        <select id="rolesSelect" multiple size="2" max="1">
                                                             <option value="2">USER</option>
                                                             <option value="1">ADMIN</option>
                                                         </select>
@@ -289,14 +287,15 @@
                     <div>
                         <label><strong>User Role:</strong></label>
                         <br>
-                        <div style="width: 14%; border-radius: 5px;"
+                        <div style="width: 100%; border-radius: 5px;"
                              class="d-flex justify-content-center mx-auto">
-                            <select id="rolesSelect2" multiple>
+                            <select id="rolesSelect2" multiple size="2" max="1">
                                 <option value="2">USER</option>
                                 <option value="1">ADMIN</option>
                             </select>
                         </div>
                     </div>
+                    <br>
                     <div>
                         <label><strong>Password:</strong></label>
                         <br>

@@ -1,21 +1,3 @@
-async function fetchRoles() {
-    try {
-        const response = await fetch('/api/admin/allRoles');
-        const roles = await response.json();
-
-        const userRolesSelect = document.getElementById("userRolesSelect");
-
-        roles.forEach(role => {
-            const option = document.createElement("option");
-            option.value = role.id;
-            option.text = role.name;
-            userRolesSelect.add(option);
-        });
-    } catch (error) {
-        console.error("Error fetching roles:", error);
-    }
-}
-
 async function fetchUsers() {
     fetch('/api/admin/users')
         .then(response => response.json())
@@ -134,7 +116,6 @@ async function submitNewUser() {
         salary,
         department,
         password,
-        rolesSelect,
     ] = inputValues;
 
     // Handle the 'rolesSelect' value separately, as it is not a string value
@@ -201,16 +182,6 @@ function addNewUser() {
     }
 }
 
-function showUserTable() {
-    document.getElementById('userTable').style.display = 'table';
-    document.getElementById('addUserForm').style.display = 'none';
-}
-
-function toggleAddUserForm() {
-    const formDisplay = document.getElementById('addUserForm').style.display;
-    document.getElementById('userTable').style.display = formDisplay === 'none' ? 'none' : 'table';
-    document.getElementById('addUserForm').style.display = formDisplay === 'none' ? 'block' : 'none';
-}
 
 
 window.openEditModal = function(id) {
@@ -314,19 +285,44 @@ document.getElementById('addNewUserBtn').addEventListener('click', function () {
     setActiveButton(this);
 });
 
-function showAdminPanel(event) {
+window.showAdminPanel = async function (event) {
     if (event) {
         event.preventDefault();
     }
     document.getElementById("adminPanel").style.display = "block";
     document.getElementById("userView").style.display = "none";
+
+    // Update the active state of the buttons
+    document.getElementById("adminPanelBtn").classList.add("active");
+    document.getElementById("userViewBtn").classList.remove("active");
 }
 
-function showUserView(event) {
+window.showUserView = async function (event) {
     event.preventDefault();
     document.getElementById("adminPanel").style.display = "none";
     document.getElementById("userView").style.display = "block";
-}
+
+    // Fetch the current user information
+    const response = await fetch('/api/admin/currentUser');
+    const user = await response.json();
+
+    // Populate the table with user information
+    const table = document.querySelector("#userView .table");
+    const tbody = table.querySelector("tbody") || table.appendChild(document.createElement("tbody"));
+    tbody.innerHTML = `
+        <tr>
+            <td>${user.id}</td>
+            <td>${user.username}</td>
+            <td>${user.firstName}</td>
+            <td>${user.lastName}</td>
+            <td>${user.department}</td>
+            <td>${user.salary}</td>
+            <td>${user.roles.join(', ')}</td>
+        </tr>
+    `;
+    document.getElementById("adminPanelBtn").classList.remove("active");
+    document.getElementById("userViewBtn").classList.add("active");
+};
 
 showAdminPanel();
 
@@ -336,13 +332,31 @@ async function fetchCurrentUser() {
     try {
         const response = await fetch('/api/admin/currentUser');
         const user = await response.json();
-        return user;
+        const usernameEl = document.getElementById('username');
+        const userRolesEl = document.getElementById('userRoles');
+
+        // Set the username
+        usernameEl.textContent = user.username;
+
+        // Set the user roles
+        userRolesEl.textContent = user.roles.join(', ');
+
     } catch (error) {
         console.error('Error fetching current user:', error);
     }
 }
+function showUserTable() {
+    document.getElementById('userTable').style.display = 'table';
+    document.getElementById('addUserForm').style.display = 'none';
+}
+
+function toggleAddUserForm() {
+    const formDisplay = document.getElementById('addUserForm').style.display;
+    document.getElementById('userTable').style.display = formDisplay === 'none' ? 'none' : 'table';
+    document.getElementById('addUserForm').style.display = formDisplay === 'none' ? 'block' : 'none';
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     await fetchUsers();
-    await fetchRoles();
+    await fetchCurrentUser()
 });

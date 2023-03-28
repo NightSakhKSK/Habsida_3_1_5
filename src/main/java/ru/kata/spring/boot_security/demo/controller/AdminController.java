@@ -15,16 +15,9 @@ public class AdminController {
     public AdminController(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
-
     @GetMapping("/api/admin")
     public String adminPage() {
         return "all-users";
     }
 
-    @GetMapping("/api/admin/allUsers")
-    public String getUserList(Model model) {
-        List<User> users = userRepository.findAll(); // Замените на ваш метод получения списка пользователей
-        model.addAttribute("user", users);
-        return "all-users"; // Замените на имя вашего HTML-шаблона
-    }
 }
